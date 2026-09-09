@@ -977,13 +977,14 @@
       return /\.gif(\?.*)?$/i.test(u);
     }
 
-    function restartGif() {
-      if (!isGifItem()) return;
+    function restartGif(cb) {
+      if (!isGifItem()) { if (cb) cb(); return; }
       var src = img.src;
       img.src = "";
       // force reload so the GIF animation restarts from its first frame
       requestAnimationFrame(function () {
         img.src = src;
+        if (cb) cb();
       });
     }
     card._restartGif = restartGif;
@@ -1046,10 +1047,10 @@
       var isThisPlaying = currentlyPlaying && currentlyPlaying.mediaEl === mediaEl;
       stopCurrentAudio();
       if (isThisPlaying) return; // was playing, just stop
-      restartGif();
       mediaEl.src = item.audio;
       mediaEl.currentTime = 0;
       var playPromise = mediaEl.play();
+      restartGif();
       if (playPromise && playPromise.catch) {
         playPromise.catch(function () {
           flashAudioError();
