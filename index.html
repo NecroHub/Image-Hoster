@@ -771,6 +771,10 @@
 
     setItemAudio(audioModalTarget.item, finalAudio);
     updateAudioBtnState(audioModalTarget.item, audioModalTarget.audioBtn);
+    if (finalAudio && !audioModalRemoveRequested) {
+      var savedCard = document.getElementById(audioModalTarget.item.id);
+      if (savedCard && savedCard._restartGif) savedCard._restartGif();
+    }
     closeAudioModal();
   });
 
@@ -966,6 +970,24 @@
     imgwrap.appendChild(img);
     card.appendChild(imgwrap);
 
+    function isGifItem() {
+      var u = item.url;
+      if (u.indexOf("data:image/gif") === 0) return true;
+      if (u.indexOf("data:") === 0) return false;
+      return /\.gif(\?.*)?$/i.test(u);
+    }
+
+    function restartGif() {
+      if (!isGifItem()) return;
+      var src = img.src;
+      img.src = "";
+      // force reload so the GIF animation restarts from its first frame
+      requestAnimationFrame(function () {
+        img.src = src;
+      });
+    }
+    card._restartGif = restartGif;
+
     var label = document.createElement("div");
     label.className = "label";
     label.textContent = item.note ? item.note : (item.url.indexOf("data:") === 0 ? "uploaded image" : item.url);
@@ -1024,6 +1046,7 @@
       var isThisPlaying = currentlyPlaying && currentlyPlaying.mediaEl === mediaEl;
       stopCurrentAudio();
       if (isThisPlaying) return; // was playing, just stop
+      restartGif();
       mediaEl.src = item.audio;
       mediaEl.currentTime = 0;
       var playPromise = mediaEl.play();
