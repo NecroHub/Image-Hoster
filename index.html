@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Board</title>
+<style>
+  :root {
+    --bg: #14161a;
+    --panel: #1c1f24;
+    --panel-alt: #21252b;
+    --border: #33383f;
+    --text: #e6e8eb;
+    --text-dim: #8b929c;
+    --accent: #5fb3a3;
+    --accent-dim: #3d7268;
+    --danger: #c4695a;
+    --mono: "SF Mono", "Cascadia Code", "Consolas", monospace;
+    --sans: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    height: 100%;
+  }
+
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+  }
+
+  .brand b { color: var(--text); font-weight: 600; }
+
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    background: var(--panel-alt);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 7px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.12s ease;
+  }
+
+  button:hover { border-color: var(--accent-dim); }
+  button:active { transform: translateY(1px); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  button.primary {
+    background: var(--accent-dim);
+    border-color: var(--accent-dim);
+    color: #fff;
+  }
+  button.primary:hover { border-color: var(--accent); }
+
+  button.danger:hover { border-color: var(--danger); }
+
+  main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  #addPanel {
+    width: 280px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    padding: 16px;
+    overflow-y: auto;
+    background: var(--panel);
+  }
+
+  #addPanel h2 {
+    font-size: 12px;
+    text-transform: none;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    margin: 0 0 10px 0;
+    font-weight: 500;
+  }
+
+  #addPanel label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 12px 0 4px 0;
+  }
+
+  #addPanel input[type="text"], #addPanel textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px;
+    border-radius: 4px;
+    font-family: var(--sans);
+    font-size: 13px;
+    resize: vertical;
+  }
+
+  #addPanel textarea { min-height: 60px; font-family: var(--mono); font-size: 12px; }
+
+  #addPanel input:focus, #addPanel textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  #addPanel .row { margin-top: 14px; }
+
+  #addBtn { width: 100%; margin-top: 14px; }
+
+  #errBox {
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--danger);
+    display: none;
+  }
+
+  #canvasWrap {
+    flex: 1;
+    position: relative;
+    overflow: auto;
+    background-image: radial-gradient(circle, #22262c 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  #canvas {
+    position: relative;
+    width: 3000px;
+    height: 3000px;
+    transform-origin: 0 0;
+    transition: transform 0.08s ease;
+  }
+
+  #zoomResetBtn {
+    font-family: var(--mono);
+    min-width: 52px;
+  }
+
+  .card {
+    position: absolute;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    cursor: grab;
+    user-select: none;
+  }
+
+  .card.dragging {
+    cursor: grabbing;
+    z-index: 1000;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.5);
+  }
+
+  .card .imgwrap {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0e1013;
+    overflow: hidden;
+  }
+
+  .card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+  }
+
+  .card .broken {
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    text-align: center;
+    padding: 10px;
+    line-height: 1.5;
+  }
+
+  .card .label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(10,11,13,0.82);
+    color: var(--text);
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 4px 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    pointer-events: none;
+  }
+
+  .card:hover .label { opacity: 1; }
+
+  .card .del {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: rgba(10,11,13,0.75);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+
+  .card:hover .del { opacity: 1; }
+  .card .del:hover { color: var(--danger); border-color: var(--danger); }
+
+  .resize {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+  }
+  .card:hover .resize { opacity: 1; }
+  .resize::after {
+    content: "";
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--text-dim);
+    border-bottom: 2px solid var(--text-dim);
+  }
+
+  #empty {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 13px;
+    text-align: center;
+    width: 260px;
+  }
+
+  #modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,11,13,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+
+  #modalOverlay.open { display: flex; }
+
+  #modal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 480px;
+    max-width: 90vw;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #modal header {
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+  }
+
+  #modal header .brand { font-size: 13px; }
+
+  #modalBody {
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  #modalBody label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 4px 0 6px 0;
+  }
+
+  #modalBody textarea {
+    width: 100%;
+    min-height: 120px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 12px;
+    resize: vertical;
+  }
+
+  #modalBody textarea:focus { outline: none; border-color: var(--accent); }
+
+  #modalFooter {
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  #statusMsg {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    min-height: 14px;
+  }
+
+  #statusMsg.ok { color: var(--accent); }
+  #statusMsg.bad { color: var(--danger); }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand"><b>board</b> — url image canvas</div>
+    <div class="toolbar">
+      <button id="zoomOutBtn" title="Zoom out">&minus;</button>
+      <button id="zoomResetBtn" title="Reset zoom">100%</button>
+      <button id="zoomInBtn" title="Zoom in">+</button>
+      <button id="exportBtn">Export string</button>
+      <button id="importBtn">Load string</button>
+      <button id="exportFileBtn">Save file</button>
+      <button id="importFileBtn">Load file</button>
+      <input type="file" id="fileInput" accept=".json,.txt" style="display:none;">
+      <button id="clearBtn" class="danger">Clear all</button>
+    </div>
+  </header>
+  <main>
+    <div id="addPanel">
+      <h2>add image</h2>
+      <label for="urlInput">Image URL</label>
+      <input type="text" id="urlInput" placeholder="https://example.com/image.jpg" autocomplete="off">
+      <label for="noteInput">Note (optional)</label>
+      <textarea id="noteInput" placeholder="anything you want attached to this image"></textarea>
+      <button id="addBtn" class="primary">Add to board</button>
+      <div id="errBox"></div>
+      <div class="row" style="margin-top:20px; border-top:1px solid var(--border); padding-top:14px;">
+        <div style="font-family:var(--mono); font-size:11px; color:var(--text-dim); line-height:1.6;">
+          Drag cards to move them.<br>
+          Drag bottom-right corner to resize.<br>
+          Data saves to this browser automatically.<br>
+          Use Export/Load to move the board to another device.
+        </div>
+      </div>
+    </div>
+    <div id="canvasWrap">
+      <div id="canvas">
+        <div id="empty">No images yet. Add one on the left, or load a saved string.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div id="modalOverlay">
+  <div id="modal">
+    <header><div class="brand" id="modalTitle">export</div></header>
+    <div id="modalBody">
+      <label id="modalLabel">Board string — copy this and save it somewhere</label>
+      <textarea id="modalText" spellcheck="false"></textarea>
+      <div id="statusMsg"></div>
+    </div>
+    <div id="modalFooter">
+      <button id="modalSecondary">Close</button>
+      <button id="modalPrimary" class="primary">Copy</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "imageboard_v1";
+  var canvas = document.getElementById("canvas");
+  var canvasWrap = document.getElementById("canvasWrap");
+  var emptyMsg = document.getElementById("empty");
+  var urlInput = document.getElementById("urlInput");
+  var noteInput = document.getElementById("noteInput");
+  var addBtn = document.getElementById("addBtn");
+  var errBox = document.getElementById("errBox");
+
+  var exportBtn = document.getElementById("exportBtn");
+  var importBtn = document.getElementById("importBtn");
+  var clearBtn = document.getElementById("clearBtn");
+
+  var modalOverlay = document.getElementById("modalOverlay");
+  var modalTitle = document.getElementById("modalTitle");
+  var modalLabel = document.getElementById("modalLabel");
+  var modalText = document.getElementById("modalText");
+  var modalPrimary = document.getElementById("modalPrimary");
+  var modalSecondary = document.getElementById("modalSecondary");
+  var statusMsg = document.getElementById("statusMsg");
+
+  var state = { items: [] };
+  var idCounter = 1;
+  var currentMode = null; // 'export' or 'import'
+  var zoom = 1;
+  var ZOOM_MIN = 0.25, ZOOM_MAX = 2.5, ZOOM_STEP = 0.1;
+  var zIndexCounter = 10;
+
+  var zoomInBtn = document.getElementById("zoomInBtn");
+  var zoomOutBtn = document.getElementById("zoomOutBtn");
+  var zoomResetBtn = document.getElementById("zoomResetBtn");
+  var exportFileBtn = document.getElementById("exportFileBtn");
+  var importFileBtn = document.getElementById("importFileBtn");
+  var fileInput = document.getElementById("fileInput");
+
+  function applyZoom() {
+    canvas.style.transform = "scale(" + zoom + ")";
+    zoomResetBtn.textContent = Math.round(zoom * 100) + "%";
+  }
+
+  function setZoom(z) {
+    zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+    applyZoom();
+  }
+
+  zoomInBtn.addEventListener("click", function () { setZoom(zoom + ZOOM_STEP); });
+  zoomOutBtn.addEventListener("click", function () { setZoom(zoom - ZOOM_STEP); });
+  zoomResetBtn.addEventListener("click", function () { setZoom(1); });
+
+  canvasWrap.addEventListener("wheel", function (e) {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    setZoom(zoom + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP));
+  }, { passive: false });
+
+  function uid() {
+    idCounter += 1;
+    return "img_" + Date.now().toString(36) + "_" + idCounter.toString(36);
+  }
+
+  function showError(msg) {
+    errBox.textContent = msg;
+    errBox.style.display = msg ? "block" : "none";
+  }
+
+  function saveLocal() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.error("Local save failed:", e);
+    }
+  }
+
+  function loadLocal() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      var parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.items)) {
+        state = parsed;
+        var maxNum = 0;
+        var maxZ = 10;
+        state.items.forEach(function (it) {
+          var m = /_([a-z0-9]+)$/.exec(it.id || "");
+          if (m) {
+            var n = parseInt(m[1], 36);
+            if (!isNaN(n) && n > maxNum) maxNum = n;
+          }
+          if (typeof it.z === "number" && it.z > maxZ) maxZ = it.z;
+        });
+        idCounter = maxNum + 1;
+        zIndexCounter = maxZ;
+      }
+    } catch (e) {
+      console.error("Local load failed:", e);
+    }
+  }
+
+  function isValidUrl(str) {
+    try {
+      var u = new URL(str);
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function clampToCanvas(x, y, w, h) {
+    var maxX = canvas.offsetWidth - w;
+    var maxY = canvas.offsetHeight - h;
+    return {
+      x: Math.max(0, Math.min(x, maxX < 0 ? 0 : maxX)),
+      y: Math.max(0, Math.min(y, maxY < 0 ? 0 : maxY))
+    };
+  }
+
+  function nextPlacement() {
+    var count = state.items.length;
+    var cols = Math.max(1, Math.floor((canvasWrap.clientWidth - 40) / 240));
+    var col = count % cols;
+    var row = Math.floor(count / cols);
+    return {
+      x: 24 + col * 240,
+      y: 24 + row * 200
+    };
+  }
+
+  function addItem(url, note, opts) {
+    opts = opts || {};
+    var item = {
+      id: opts.id || uid(),
+      url: url,
+      note: note || "",
+      x: typeof opts.x === "number" ? opts.x : nextPlacement().x,
+      y: typeof opts.y === "number" ? opts.y : nextPlacement().y,
+      w: typeof opts.w === "number" ? opts.w : 220,
+      h: typeof opts.h === "number" ? opts.h : 170,
+      z: typeof opts.z === "number" ? opts.z : (++zIndexCounter)
+    };
+    state.items.push(item);
+    renderItem(item);
+    saveLocal();
+    updateEmptyState();
+    return item;
+  }
+
+  function removeItem(id) {
+    state.items = state.items.filter(function (it) { return it.id !== id; });
+    var el = document.getElementById(id);
+    if (el) el.remove();
+    saveLocal();
+    updateEmptyState();
+  }
+
+  function updateEmptyState() {
+    emptyMsg.style.display = state.items.length === 0 ? "block" : "none";
+  }
+
+  function renderItem(item) {
+    var card = document.createElement("div");
+    card.className = "card";
+    card.id = item.id;
+    card.style.left = item.x + "px";
+    card.style.top = item.y + "px";
+    card.style.width = item.w + "px";
+    card.style.height = item.h + "px";
+    card.style.zIndex = item.z || 1;
+
+    var imgwrap = document.createElement("div");
+    imgwrap.className = "imgwrap";
+
+    var img = document.createElement("img");
+    img.src = item.url;
+    img.alt = item.note || "board image";
+    img.draggable = false;
+    img.addEventListener("error", function () {
+      imgwrap.innerHTML = "";
+      var broken = document.createElement("div");
+      broken.className = "broken";
+      broken.textContent = "Couldn't load image\n" + item.url;
+      imgwrap.appendChild(broken);
+    });
+    imgwrap.appendChild(img);
+    card.appendChild(imgwrap);
+
+    var label = document.createElement("div");
+    label.className = "label";
+    label.textContent = item.note ? item.note : item.url;
+    card.appendChild(label);
+
+    var del = document.createElement("div");
+    del.className = "del";
+    del.textContent = "\u2715";
+    del.title = "Remove";
+    del.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+    del.addEventListener("click", function (e) {
+      e.stopPropagation();
+      removeItem(item.id);
+    });
+    card.appendChild(del);
+
+    var resize = document.createElement("div");
+    resize.className = "resize";
+    card.appendChild(resize);
+
+    attachDrag(card, item);
+    attachResize(resize, card, item);
+
+    canvas.appendChild(card);
+  }
+
+  function attachDrag(card, item) {
+    var dragging = false;
+    var startX, startY, origX, origY;
+
+    card.addEventListener("mousedown", function (e) {
+      if (e.target.classList.contains("resize") || e.target.classList.contains("del")) return;
+      item.z = ++zIndexCounter;
+      card.style.zIndex = item.z;
+      dragging = true;
+      card.classList.add("dragging");
+      startX = e.clientX;
+      startY = e.clientY;
+      origX = item.x;
+      origY = item.y;
+      e.preventDefault();
+    });
+
+    document.addEventListener("mousemove", function (e) {
+      if (!dragging) return;
+      var dx = (e.clientX - startX) / zoom;
+      var dy = (e.clientY - startY) / zoom;
+      var pos = clampToCanvas(origX + dx, origY + dy, item.w, item.h);
+      item.x = pos.x;
+      item.y = pos.y;
+      card.style.left = item.x + "px";
+      card.style.top = item.y + "px";
+    });
+
+    document.addEventListener("mouseup", function () {
+      if (!dragging) return;
+      dragging = false;
+      card.classList.remove("dragging");
+      saveLocal();
+    });
+  }
+
+  function attachResize(handle, card, item) {
+    var resizing = false;
+    var startX, startY, origW, origH;
+
+    handle.addEventListener("mousedown", function (e) {
+      resizing = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      origW = item.w;
+      origH = item.h;
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    document.addEventListener("mousemove", function (e) {
+      if (!resizing) return;
+      var dw = (e.clientX - startX) / zoom;
+      var dh = (e.clientY - startY) / zoom;
+      item.w = Math.max(100, Math.min(800, origW + dw));
+      item.h = Math.max(80, Math.min(800, origH + dh));
+      card.style.width = item.w + "px";
+      card.style.height = item.h + "px";
+    });
+
+    document.addEventListener("mouseup", function () {
+      if (!resizing) return;
+      resizing = false;
+      saveLocal();
+    });
+  }
+
+  function renderAll() {
+    canvas.querySelectorAll(".card").forEach(function (el) { el.remove(); });
+    state.items.forEach(renderItem);
+    updateEmptyState();
+  }
+
+  addBtn.addEventListener("click", function () {
+    var url = urlInput.value.trim();
+    var note = noteInput.value.trim();
+    showError("");
+    if (!url) {
+      showError("Enter a URL first.");
+      return;
+    }
+    if (!isValidUrl(url)) {
+      showError("That doesn't look like a valid http/https URL.");
+      return;
+    }
+    addItem(url, note);
+    urlInput.value = "";
+    noteInput.value = "";
+    urlInput.focus();
+  });
+
+  urlInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") addBtn.click();
+  });
+
+  clearBtn.addEventListener("click", function () {
+    if (state.items.length === 0) return;
+    if (!confirm("Remove all images from the board? This can't be undone.")) return;
+    state.items = [];
+    renderAll();
+    saveLocal();
+  });
+
+  // --- Encode / decode board string ---
+  function encodeState() {
+    var json = JSON.stringify(state);
+    var b64 = btoa(unescape(encodeURIComponent(json)));
+    return "BOARD1:" + b64;
+  }
+
+  function decodeState(str) {
+    str = str.trim();
+    if (!str) throw new Error("Empty string.");
+    var prefix = "BOARD1:";
+    var payload;
+    if (str.indexOf(prefix) === 0) {
+      payload = str.slice(prefix.length);
+    } else {
+      payload = str;
+    }
+    var json;
+    try {
+      json = decodeURIComponent(escape(atob(payload)));
+    } catch (e) {
+      throw new Error("Couldn't decode that string. Check it was copied in full.");
+    }
+    var parsed;
+    try {
+      parsed = JSON.parse(json);
+    } catch (e) {
+      throw new Error("Decoded data isn't valid board data.");
+    }
+    if (!parsed || !Array.isArray(parsed.items)) {
+      throw new Error("Decoded data doesn't contain a valid image list.");
+    }
+    parsed.items.forEach(function (it, i) {
+      if (typeof it.url !== "string") {
+        throw new Error("Item " + (i + 1) + " is missing a URL.");
+      }
+    });
+    return parsed;
+  }
+
+  function openModal(mode) {
+    currentMode = mode;
+    statusMsg.textContent = "";
+    statusMsg.className = "";
+    if (mode === "export") {
+      modalTitle.textContent = "export string";
+      modalLabel.textContent = "Board string — copy this and save it somewhere";
+      modalText.value = encodeState();
+      modalText.readOnly = true;
+      modalPrimary.textContent = "Copy";
+    } else {
+      modalTitle.textContent = "load string";
+      modalLabel.textContent = "Paste a board string below";
+      modalText.value = "";
+      modalText.readOnly = false;
+      modalPrimary.textContent = "Load";
+    }
+    modalOverlay.classList.add("open");
+    setTimeout(function () {
+      modalText.focus();
+      modalText.select();
+    }, 30);
+  }
+
+  function closeModal() {
+    modalOverlay.classList.remove("open");
+    currentMode = null;
+  }
+
+  exportBtn.addEventListener("click", function () { openModal("export"); });
+  importBtn.addEventListener("click", function () { openModal("import"); });
+  modalSecondary.addEventListener("click", closeModal);
+  modalOverlay.addEventListener("click", function (e) {
+    if (e.target === modalOverlay) closeModal();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && modalOverlay.classList.contains("open")) closeModal();
+  });
+
+  modalPrimary.addEventListener("click", function () {
+    if (currentMode === "export") {
+      modalText.select();
+      var copied = false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(modalText.value).then(function () {
+          statusMsg.textContent = "Copied to clipboard.";
+          statusMsg.className = "ok";
+        }).catch(function () {
+          tryFallbackCopy();
+        });
+      } else {
+        tryFallbackCopy();
+      }
+      function tryFallbackCopy() {
+        try {
+          copied = document.execCommand("copy");
+        } catch (e) { copied = false; }
+        statusMsg.textContent = copied ? "Copied to clipboard." : "Select the text and copy manually.";
+        statusMsg.className = copied ? "ok" : "bad";
+      }
+    } else {
+      var raw = modalText.value;
+      try {
+        var parsed = decodeState(raw);
+        var replace = state.items.length === 0 || confirm("Loading will replace the current board. Continue?");
+        if (!replace) return;
+        state = parsed;
+        var maxNum = 0;
+        var maxZ = 10;
+        state.items.forEach(function (it) {
+          if (!it.id) it.id = uid();
+          var m = /_([a-z0-9]+)$/.exec(it.id);
+          if (m) {
+            var n = parseInt(m[1], 36);
+            if (!isNaN(n) && n > maxNum) maxNum = n;
+          }
+          if (typeof it.x !== "number") it.x = nextPlacement().x;
+          if (typeof it.y !== "number") it.y = nextPlacement().y;
+          if (typeof it.w !== "number") it.w = 220;
+          if (typeof it.h !== "number") it.h = 170;
+          if (typeof it.note !== "string") it.note = "";
+          if (typeof it.z !== "number") it.z = ++maxZ;
+          if (it.z > maxZ) maxZ = it.z;
+        });
+        idCounter = maxNum + 1;
+        zIndexCounter = maxZ;
+        renderAll();
+        saveLocal();
+        statusMsg.textContent = "Board loaded (" + state.items.length + " image" + (state.items.length === 1 ? "" : "s") + ").";
+        statusMsg.className = "ok";
+        setTimeout(closeModal, 700);
+      } catch (err) {
+        statusMsg.textContent = err.message || "Couldn't load that string.";
+        statusMsg.className = "bad";
+      }
+    }
+  });
+
+  // --- File export / import ---
+  exportFileBtn.addEventListener("click", function () {
+    var json = JSON.stringify(state, null, 2);
+    var blob = new Blob([json], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    a.href = url;
+    a.download = "board-" + stamp + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+
+  importFileBtn.addEventListener("click", function () {
+    fileInput.value = "";
+    fileInput.click();
+  });
+
+  fileInput.addEventListener("change", function () {
+    var file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var text = String(reader.result || "");
+      var parsed;
+      try {
+        parsed = JSON.parse(text);
+        if (!parsed || !Array.isArray(parsed.items)) throw new Error();
+        parsed.items.forEach(function (it) {
+          if (typeof it.url !== "string") throw new Error();
+        });
+      } catch (e) {
+        try {
+          parsed = decodeState(text);
+        } catch (e2) {
+          alert("That file isn't a valid board export.");
+          return;
+        }
+      }
+      var replace = state.items.length === 0 || confirm("Loading will replace the current board. Continue?");
+      if (!replace) return;
+      state = parsed;
+      var maxNum = 0, maxZ = 10;
+      state.items.forEach(function (it) {
+        if (!it.id) it.id = uid();
+        var m = /_([a-z0-9]+)$/.exec(it.id);
+        if (m) {
+          var n = parseInt(m[1], 36);
+          if (!isNaN(n) && n > maxNum) maxNum = n;
+        }
+        if (typeof it.x !== "number") it.x = nextPlacement().x;
+        if (typeof it.y !== "number") it.y = nextPlacement().y;
+        if (typeof it.w !== "number") it.w = 220;
+        if (typeof it.h !== "number") it.h = 170;
+        if (typeof it.note !== "string") it.note = "";
+        if (typeof it.z !== "number") it.z = ++maxZ;
+        if (it.z > maxZ) maxZ = it.z;
+      });
+      idCounter = maxNum + 1;
+      zIndexCounter = maxZ;
+      renderAll();
+      saveLocal();
+    };
+    reader.onerror = function () {
+      alert("Couldn't read that file.");
+    };
+    reader.readAsText(file);
+  });
+
+  // --- init ---
+  loadLocal();
+  applyZoom();
+  renderAll();
+})();
+</script>
+</body>
+</html>
