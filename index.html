@@ -492,6 +492,11 @@
       <textarea id="noteInput" placeholder="anything you want attached to this image"></textarea>
       <label for="audioInput">Audio URL (optional)</label>
       <input type="text" id="audioInput" placeholder="https://example.com/sound.mp3 or .mp4" autocomplete="off">
+      <div class="row" style="margin-top:8px; display:flex; align-items:center; gap:8px;">
+        <button id="audioFileBtn" type="button" style="flex:1;">Upload audio file&hellip;</button>
+        <span id="audioFileName" style="font-family:var(--mono); font-size:11px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px;"></span>
+      </div>
+      <input type="file" id="audioFileInput" accept="audio/*,video/mp4,.mp3,.wav,.ogg,.m4a,.mp4" style="display:none;">
       <button id="addBtn" class="primary">Add to board</button>
       <div id="errBox"></div>
       <div class="row" style="margin-top:20px; border-top:1px solid var(--border); padding-top:14px;">
@@ -539,6 +544,10 @@
   var urlInput = document.getElementById("urlInput");
   var noteInput = document.getElementById("noteInput");
   var audioInput = document.getElementById("audioInput");
+  var audioFileBtn = document.getElementById("audioFileBtn");
+  var audioFileInput = document.getElementById("audioFileInput");
+  var audioFileName = document.getElementById("audioFileName");
+  var pendingAudioDataUrl = "";
   var addBtn = document.getElementById("addBtn");
   var errBox = document.getElementById("errBox");
 
@@ -572,11 +581,13 @@
 
   function promptForAudio(item, audioBtn) {
     var current = item.audio || "";
-    var val = prompt("Audio URL for this card (mp3, wav, ogg, or mp4 — leave blank to remove):", current);
+    var displayCurrent = current.indexOf("data:") === 0 ? "[uploaded audio file]" : current;
+    var val = prompt("Audio URL for this card (mp3, wav, ogg, or mp4 — leave blank to remove):", displayCurrent);
     if (val === null) return; // cancelled
     val = val.trim();
+    if (val === displayCurrent) return; // unchanged
     if (val && !isValidUrl(val)) {
-      alert("That doesn't look like a valid http/https URL.");
+      alert("That doesn't look like a valid http/https URL. To upload a file instead, remove this card's audio here, then use the \"Upload audio file\u2026\" button in the add panel for a new card.");
       return;
     }
     setItemAudio(item, val);
@@ -957,7 +968,7 @@
   addBtn.addEventListener("click", function () {
     var url = urlInput.value.trim();
     var note = noteInput.value.trim();
-    var audio = audioInput.value.trim();
+    var audio = pendingAudioDataUrl || audioInput.value.trim();
     showError("");
     if (!url) {
       showError("Enter a URL first.");
@@ -967,7 +978,7 @@
       showError("That doesn't look like a valid http/https URL.");
       return;
     }
-    if (audio && !isValidUrl(audio)) {
+    if (audio && !pendingAudioDataUrl && !isValidUrl(audio)) {
       showError("The audio URL doesn't look like a valid http/https URL.");
       return;
     }
@@ -975,6 +986,9 @@
     urlInput.value = "";
     noteInput.value = "";
     audioInput.value = "";
+    pendingAudioDataUrl = "";
+    audioFileName.textContent = "";
+    audioFileInput.value = "";
     if (window.innerWidth <= 760) {
       closePanel();
     } else {
@@ -987,6 +1001,46 @@
   });
   audioInput.addEventListener("keydown", function (e) {
     if (e.key === "Enter") addBtn.click();
+  });
+
+  audioInput.addEventListener("input", function () {
+    if (pendingAudioDataUrl) {
+      pendingAudioDataUrl = "";
+      audioFileName.textContent = "";
+      audioFileInput.value = "";
+    }
+  });
+
+  audioFileBtn.addEventListener("click", function () {
+    audioFileInput.value = "";
+    audioFileInput.click();
+  });
+
+  audioFileInput.addEventListener("change", function () {
+    var file = audioFileInput.files && audioFileInput.files[0];
+    if (!file) return;
+    var isAudioLike = file.type.indexOf("audio/") === 0 || file.type === "video/mp4" || /\.(mp3|wav|ogg|m4a|mp4|aac|flac|webm)$/i.test(file.name);
+    if (!isAudioLike) {
+      alert("Please choose an audio file (mp3, wav, ogg, m4a, or mp4).");
+      audioFileInput.value = "";
+      return;
+    }
+    var MAX_BYTES = 15 * 1024 * 1024; // 15MB safety cap for localStorage
+    if (file.size > MAX_BYTES) {
+      alert("That file is a bit large for saving in the browser (max ~15MB). Try a smaller file or use a hosted URL instead.");
+      audioFileInput.value = "";
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      pendingAudioDataUrl = String(reader.result || "");
+      audioInput.value = "";
+      audioFileName.textContent = file.name;
+    };
+    reader.onerror = function () {
+      alert("Couldn't read that file.");
+    };
+    reader.readAsDataURL(file);
   });
 
   clearBtn.addEventListener("click", function () {
