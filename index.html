@@ -255,6 +255,31 @@
   .card:hover .del { opacity: 1; }
   .card .del:hover { color: var(--danger); border-color: var(--danger); }
 
+  .card .audioBtn {
+    position: absolute;
+    top: 4px;
+    right: 28px;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: rgba(10,11,13,0.75);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 11px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  }
+
+  .card:hover .audioBtn { opacity: 1; }
+  .card .audioBtn.has-audio { opacity: 1; color: var(--accent); border-color: var(--accent-dim); }
+  .card .audioBtn:hover { color: var(--accent); border-color: var(--accent); }
+  .card .audioBtn.playing { color: #fff; background: var(--accent-dim); border-color: var(--accent); }
+
   .resize {
     position: absolute;
     bottom: 0;
@@ -421,6 +446,13 @@
       height: 26px;
       font-size: 15px;
     }
+    .card .audioBtn {
+      opacity: 1;
+      width: 26px;
+      height: 26px;
+      font-size: 13px;
+      right: 34px;
+    }
     .card .resize {
       opacity: 1;
       width: 22px;
@@ -458,12 +490,16 @@
       <input type="text" id="urlInput" placeholder="https://example.com/image.jpg" autocomplete="off">
       <label for="noteInput">Note (optional)</label>
       <textarea id="noteInput" placeholder="anything you want attached to this image"></textarea>
+      <label for="audioInput">Audio URL (optional)</label>
+      <input type="text" id="audioInput" placeholder="https://example.com/sound.mp3 or .mp4" autocomplete="off">
       <button id="addBtn" class="primary">Add to board</button>
       <div id="errBox"></div>
       <div class="row" style="margin-top:20px; border-top:1px solid var(--border); padding-top:14px;">
         <div style="font-family:var(--mono); font-size:11px; color:var(--text-dim); line-height:1.6;">
           Drag cards to move them.<br>
           Drag bottom-right corner to resize.<br>
+          Click the &#9835; icon on a card to add/edit its audio.<br>
+          mp3, wav, ogg or mp4 (audio track only) all work.<br>
           Data saves to this browser automatically.<br>
           Use Export/Load to move the board to another device.
         </div>
@@ -502,6 +538,7 @@
   var emptyMsg = document.getElementById("empty");
   var urlInput = document.getElementById("urlInput");
   var noteInput = document.getElementById("noteInput");
+  var audioInput = document.getElementById("audioInput");
   var addBtn = document.getElementById("addBtn");
   var errBox = document.getElementById("errBox");
 
@@ -523,6 +560,38 @@
   var zoom = 1;
   var ZOOM_MIN = 0.25, ZOOM_MAX = 2.5, ZOOM_STEP = 0.1;
   var zIndexCounter = 10;
+  var currentlyPlaying = null; // { mediaEl, btnEl }
+
+  function stopCurrentAudio() {
+    if (currentlyPlaying) {
+      try { currentlyPlaying.mediaEl.pause(); } catch (e) {}
+      currentlyPlaying.btnEl.classList.remove("playing");
+      currentlyPlaying = null;
+    }
+  }
+
+  function promptForAudio(item, audioBtn) {
+    var current = item.audio || "";
+    var val = prompt("Audio URL for this card (mp3, wav, ogg, or mp4 — leave blank to remove):", current);
+    if (val === null) return; // cancelled
+    val = val.trim();
+    if (val && !isValidUrl(val)) {
+      alert("That doesn't look like a valid http/https URL.");
+      return;
+    }
+    setItemAudio(item, val);
+    updateAudioBtnState(item, audioBtn);
+  }
+
+  function updateAudioBtnState(item, audioBtn) {
+    if (item.audio) {
+      audioBtn.classList.add("has-audio");
+      audioBtn.title = "Play audio (click to play, shift-click to edit)";
+    } else {
+      audioBtn.classList.remove("has-audio");
+      audioBtn.title = "Add audio to this card";
+    }
+  }
 
   var panelToggle = document.getElementById("panelToggle");
   var panelScrim = document.getElementById("panelScrim");
@@ -644,6 +713,7 @@
       id: opts.id || uid(),
       url: url,
       note: note || "",
+      audio: opts.audio || "",
       x: typeof opts.x === "number" ? opts.x : nextPlacement().x,
       y: typeof opts.y === "number" ? opts.y : nextPlacement().y,
       w: typeof opts.w === "number" ? opts.w : 220,
@@ -657,7 +727,16 @@
     return item;
   }
 
+  function setItemAudio(item, url) {
+    item.audio = url || "";
+    saveLocal();
+  }
+
   function removeItem(id) {
+    if (currentlyPlaying) {
+      var playingCard = currentlyPlaying.mediaEl.closest(".card");
+      if (playingCard && playingCard.id === id) stopCurrentAudio();
+    }
     state.items = state.items.filter(function (it) { return it.id !== id; });
     var el = document.getElementById(id);
     if (el) el.remove();
@@ -712,6 +791,50 @@
       removeItem(item.id);
     });
     card.appendChild(del);
+
+    // Hidden media element used for audio playback. <video> is used (kept
+    // visually hidden) so mp4 files can be used purely as audio sources.
+    var mediaEl = document.createElement("video");
+    mediaEl.style.display = "none";
+    mediaEl.preload = "none";
+    mediaEl.addEventListener("ended", function () {
+      audioBtn.classList.remove("playing");
+      if (currentlyPlaying && currentlyPlaying.mediaEl === mediaEl) currentlyPlaying = null;
+    });
+    mediaEl.addEventListener("error", function () {
+      audioBtn.classList.remove("playing");
+      if (currentlyPlaying && currentlyPlaying.mediaEl === mediaEl) currentlyPlaying = null;
+      if (item.audio) alert("Couldn't load audio for this card:\n" + item.audio);
+    });
+    card.appendChild(mediaEl);
+
+    var audioBtn = document.createElement("div");
+    audioBtn.className = "audioBtn";
+    audioBtn.textContent = "\u266B"; // eighth note symbol
+    audioBtn.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+    audioBtn.addEventListener("touchstart", function (e) { e.stopPropagation(); }, { passive: true });
+    audioBtn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (e.shiftKey || !item.audio) {
+        promptForAudio(item, audioBtn);
+        return;
+      }
+      var isThisPlaying = currentlyPlaying && currentlyPlaying.mediaEl === mediaEl;
+      stopCurrentAudio();
+      if (isThisPlaying) return; // was playing, just stop
+      mediaEl.src = item.audio;
+      mediaEl.currentTime = 0;
+      var playPromise = mediaEl.play();
+      if (playPromise && playPromise.catch) {
+        playPromise.catch(function () {
+          alert("Couldn't play audio for this card:\n" + item.audio);
+        });
+      }
+      audioBtn.classList.add("playing");
+      currentlyPlaying = { mediaEl: mediaEl, btnEl: audioBtn };
+    });
+    updateAudioBtnState(item, audioBtn);
+    card.appendChild(audioBtn);
 
     var resize = document.createElement("div");
     resize.className = "resize";
@@ -825,6 +948,7 @@
   }
 
   function renderAll() {
+    stopCurrentAudio();
     canvas.querySelectorAll(".card").forEach(function (el) { el.remove(); });
     state.items.forEach(renderItem);
     updateEmptyState();
@@ -833,6 +957,7 @@
   addBtn.addEventListener("click", function () {
     var url = urlInput.value.trim();
     var note = noteInput.value.trim();
+    var audio = audioInput.value.trim();
     showError("");
     if (!url) {
       showError("Enter a URL first.");
@@ -842,9 +967,14 @@
       showError("That doesn't look like a valid http/https URL.");
       return;
     }
-    addItem(url, note);
+    if (audio && !isValidUrl(audio)) {
+      showError("The audio URL doesn't look like a valid http/https URL.");
+      return;
+    }
+    addItem(url, note, { audio: audio });
     urlInput.value = "";
     noteInput.value = "";
+    audioInput.value = "";
     if (window.innerWidth <= 760) {
       closePanel();
     } else {
@@ -853,6 +983,9 @@
   });
 
   urlInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") addBtn.click();
+  });
+  audioInput.addEventListener("keydown", function (e) {
     if (e.key === "Enter") addBtn.click();
   });
 
@@ -985,6 +1118,7 @@
           if (typeof it.w !== "number") it.w = 220;
           if (typeof it.h !== "number") it.h = 170;
           if (typeof it.note !== "string") it.note = "";
+        if (typeof it.audio !== "string") it.audio = "";
           if (typeof it.z !== "number") it.z = ++maxZ;
           if (it.z > maxZ) maxZ = it.z;
         });
@@ -1059,6 +1193,7 @@
         if (typeof it.w !== "number") it.w = 220;
         if (typeof it.h !== "number") it.h = 170;
         if (typeof it.note !== "string") it.note = "";
+        if (typeof it.audio !== "string") it.audio = "";
         if (typeof it.z !== "number") it.z = ++maxZ;
         if (it.z > maxZ) maxZ = it.z;
       });
