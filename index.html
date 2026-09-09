@@ -960,13 +960,14 @@
     img.src = item.url;
     img.alt = item.note || "board image";
     img.draggable = false;
-    img.addEventListener("error", function () {
+    function onImgError() {
       imgwrap.innerHTML = "";
       var broken = document.createElement("div");
       broken.className = "broken";
       broken.textContent = "Couldn't load image" + (item.url.indexOf("data:") === 0 ? "" : "\n" + item.url);
       imgwrap.appendChild(broken);
-    });
+    }
+    img.addEventListener("error", onImgError);
     imgwrap.appendChild(img);
     card.appendChild(imgwrap);
 
@@ -980,10 +981,12 @@
     function restartGif(cb) {
       if (!isGifItem()) { if (cb) cb(); return; }
       var src = img.src;
+      img.removeEventListener("error", onImgError);
       img.src = "";
       // force reload so the GIF animation restarts from its first frame
       requestAnimationFrame(function () {
         img.src = src;
+        img.addEventListener("error", onImgError);
         if (cb) cb();
       });
     }
