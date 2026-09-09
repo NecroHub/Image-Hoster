@@ -280,6 +280,25 @@
   .card .audioBtn:hover { color: var(--accent); border-color: var(--accent); }
   .card .audioBtn.playing { color: #fff; background: var(--accent-dim); border-color: var(--accent); }
 
+  .card .audioErr {
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    top: 6px;
+    background: rgba(196,105,90,0.92);
+    color: #fff;
+    font-size: 10px;
+    font-family: var(--mono);
+    padding: 4px 6px;
+    border-radius: 4px;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+  .card .audioErr.show { opacity: 1; transform: translateY(0); }
+
   .resize {
     position: absolute;
     bottom: 0;
@@ -313,83 +332,6 @@
     text-align: center;
     width: 260px;
   }
-
-  #modalOverlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(10,11,13,0.7);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-  }
-
-  #modalOverlay.open { display: flex; }
-
-  #modal {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    width: 480px;
-    max-width: 90vw;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  #modal header {
-    border-bottom: 1px solid var(--border);
-    padding: 12px 16px;
-  }
-
-  #modal header .brand { font-size: 13px; }
-
-  #modalBody {
-    padding: 16px;
-    overflow-y: auto;
-  }
-
-  #modalBody label {
-    display: block;
-    font-size: 12px;
-    color: var(--text-dim);
-    margin: 4px 0 6px 0;
-  }
-
-  #modalBody textarea {
-    width: 100%;
-    min-height: 120px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    padding: 8px;
-    border-radius: 4px;
-    font-family: var(--mono);
-    font-size: 12px;
-    resize: vertical;
-  }
-
-  #modalBody textarea:focus { outline: none; border-color: var(--accent); }
-
-  #modalFooter {
-    border-top: 1px solid var(--border);
-    padding: 12px 16px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-  }
-
-  #statusMsg {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-top: 8px;
-    min-height: 14px;
-  }
-
-  #statusMsg.ok { color: var(--accent); }
-  #statusMsg.bad { color: var(--danger); }
 
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
@@ -459,9 +401,121 @@
       height: 22px;
     }
     .card .resize::after { right: 4px; bottom: 4px; width: 10px; height: 10px; }
+  }
 
-    #modal { width: 92vw; }
-    #modalBody textarea { min-height: 100px; font-size: 13px; }
+  /* Audio edit modal */
+  #audioModalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,11,13,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 4000;
+    padding: 20px;
+  }
+  #audioModalOverlay.open { display: flex; }
+
+  #audioModal {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 380px;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+
+  #audioModal header {
+    border-bottom: 1px solid var(--border);
+    padding: 12px 16px;
+  }
+
+  #audioModal header .brand { font-size: 13px; }
+
+  #audioModalBody {
+    padding: 16px;
+  }
+
+  #audioModalBody label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 0 0 6px 0;
+  }
+
+  #audioModalBody input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px;
+    border-radius: 4px;
+    font-family: var(--sans);
+    font-size: 13px;
+  }
+  #audioModalBody input[type="text"]:focus { outline: none; border-color: var(--accent); }
+
+  #audioModalOr {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin: 12px 0;
+  }
+
+  #audioModalUploadRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #audioModalUploadRow button { flex: 1; }
+  #audioModalFileName {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 120px;
+  }
+
+  #audioModalCurrent {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  #audioModalCurrent span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #audioModalMsg {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--danger);
+    margin-top: 10px;
+    min-height: 14px;
+    display: none;
+  }
+  #audioModalMsg.show { display: block; }
+
+  #audioModalFooter {
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
   }
 </style>
 </head>
@@ -474,11 +528,9 @@
       <button id="zoomOutBtn" title="Zoom out">&minus;</button>
       <button id="zoomResetBtn" title="Reset zoom">100%</button>
       <button id="zoomInBtn" title="Zoom in">+</button>
-      <button id="exportBtn">Export string</button>
-      <button id="importBtn">Load string</button>
       <button id="exportFileBtn">Save file</button>
       <button id="importFileBtn">Load file</button>
-      <input type="file" id="fileInput" accept=".json,.txt" style="display:none;">
+      <input type="file" id="fileInput" accept=".json" style="display:none;">
       <button id="clearBtn" class="danger">Clear all</button>
     </div>
   </header>
@@ -488,6 +540,11 @@
       <h2>add image</h2>
       <label for="urlInput">Image URL</label>
       <input type="text" id="urlInput" placeholder="https://example.com/image.jpg" autocomplete="off">
+      <div class="row" style="margin-top:8px; display:flex; align-items:center; gap:8px;">
+        <button id="imageFileBtn" type="button" style="flex:1;">Upload image file&hellip;</button>
+        <span id="imageFileName" style="font-family:var(--mono); font-size:11px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:110px;"></span>
+      </div>
+      <input type="file" id="imageFileInput" accept="image/*" style="display:none;">
       <label for="noteInput">Note (optional)</label>
       <textarea id="noteInput" placeholder="anything you want attached to this image"></textarea>
       <label for="audioInput">Audio URL (optional)</label>
@@ -506,7 +563,7 @@
           Click the &#9835; icon on a card to add/edit its audio.<br>
           mp3, wav, ogg or mp4 (audio track only) all work.<br>
           Data saves to this browser automatically.<br>
-          Use Export/Load to move the board to another device.
+          Use Save/Load file to move the board to another device.
         </div>
       </div>
     </div>
@@ -518,17 +575,27 @@
   </main>
 </div>
 
-<div id="modalOverlay">
-  <div id="modal">
-    <header><div class="brand" id="modalTitle">export</div></header>
-    <div id="modalBody">
-      <label id="modalLabel">Board string — copy this and save it somewhere</label>
-      <textarea id="modalText" spellcheck="false"></textarea>
-      <div id="statusMsg"></div>
+<div id="audioModalOverlay">
+  <div id="audioModal">
+    <header><div class="brand">card audio</div></header>
+    <div id="audioModalBody">
+      <label for="audioModalUrl">Audio URL</label>
+      <input type="text" id="audioModalUrl" placeholder="https://example.com/sound.mp3 or .mp4" autocomplete="off">
+      <div id="audioModalOr">— or —</div>
+      <div id="audioModalUploadRow">
+        <button id="audioModalUploadBtn" type="button">Upload audio file&hellip;</button>
+        <span id="audioModalFileName"></span>
+      </div>
+      <input type="file" id="audioModalFileInput" accept="audio/*,video/mp4,.mp3,.wav,.ogg,.m4a,.mp4" style="display:none;">
+      <div id="audioModalCurrent" style="display:none;">
+        <span id="audioModalCurrentLabel"></span>
+        <button id="audioModalRemoveBtn" class="danger" type="button">Remove</button>
+      </div>
+      <div id="audioModalMsg"></div>
     </div>
-    <div id="modalFooter">
-      <button id="modalSecondary">Close</button>
-      <button id="modalPrimary" class="primary">Copy</button>
+    <div id="audioModalFooter">
+      <button id="audioModalCancel">Cancel</button>
+      <button id="audioModalSave" class="primary">Save</button>
     </div>
   </div>
 </div>
@@ -542,6 +609,10 @@
   var canvasWrap = document.getElementById("canvasWrap");
   var emptyMsg = document.getElementById("empty");
   var urlInput = document.getElementById("urlInput");
+  var imageFileBtn = document.getElementById("imageFileBtn");
+  var imageFileInput = document.getElementById("imageFileInput");
+  var imageFileName = document.getElementById("imageFileName");
+  var pendingImageDataUrl = "";
   var noteInput = document.getElementById("noteInput");
   var audioInput = document.getElementById("audioInput");
   var audioFileBtn = document.getElementById("audioFileBtn");
@@ -551,21 +622,10 @@
   var addBtn = document.getElementById("addBtn");
   var errBox = document.getElementById("errBox");
 
-  var exportBtn = document.getElementById("exportBtn");
-  var importBtn = document.getElementById("importBtn");
   var clearBtn = document.getElementById("clearBtn");
-
-  var modalOverlay = document.getElementById("modalOverlay");
-  var modalTitle = document.getElementById("modalTitle");
-  var modalLabel = document.getElementById("modalLabel");
-  var modalText = document.getElementById("modalText");
-  var modalPrimary = document.getElementById("modalPrimary");
-  var modalSecondary = document.getElementById("modalSecondary");
-  var statusMsg = document.getElementById("statusMsg");
 
   var state = { items: [] };
   var idCounter = 1;
-  var currentMode = null; // 'export' or 'import'
   var zoom = 1;
   var ZOOM_MIN = 0.25, ZOOM_MAX = 2.5, ZOOM_STEP = 0.1;
   var zIndexCounter = 10;
@@ -579,20 +639,140 @@
     }
   }
 
-  function promptForAudio(item, audioBtn) {
+  // --- Card audio edit modal ---
+  var audioModalOverlay = document.getElementById("audioModalOverlay");
+  var audioModalUrl = document.getElementById("audioModalUrl");
+  var audioModalUploadBtn = document.getElementById("audioModalUploadBtn");
+  var audioModalFileInput = document.getElementById("audioModalFileInput");
+  var audioModalFileName = document.getElementById("audioModalFileName");
+  var audioModalCurrent = document.getElementById("audioModalCurrent");
+  var audioModalCurrentLabel = document.getElementById("audioModalCurrentLabel");
+  var audioModalRemoveBtn = document.getElementById("audioModalRemoveBtn");
+  var audioModalMsg = document.getElementById("audioModalMsg");
+  var audioModalCancel = document.getElementById("audioModalCancel");
+  var audioModalSave = document.getElementById("audioModalSave");
+
+  var audioModalTarget = null; // { item, audioBtn }
+  var audioModalPendingDataUrl = "";
+  var audioModalRemoveRequested = false;
+
+  function showAudioModalMsg(msg) {
+    audioModalMsg.textContent = msg || "";
+    audioModalMsg.classList.toggle("show", !!msg);
+  }
+
+  function openAudioModal(item, audioBtn) {
+    audioModalTarget = { item: item, audioBtn: audioBtn };
+    audioModalPendingDataUrl = "";
+    audioModalRemoveRequested = false;
+    showAudioModalMsg("");
+    audioModalFileName.textContent = "";
+    audioModalFileInput.value = "";
+
     var current = item.audio || "";
-    var displayCurrent = current.indexOf("data:") === 0 ? "[uploaded audio file]" : current;
-    var val = prompt("Audio URL for this card (mp3, wav, ogg, or mp4 — leave blank to remove):", displayCurrent);
-    if (val === null) return; // cancelled
-    val = val.trim();
-    if (val === displayCurrent) return; // unchanged
-    if (val && !isValidUrl(val)) {
-      alert("That doesn't look like a valid http/https URL. To upload a file instead, remove this card's audio here, then use the \"Upload audio file\u2026\" button in the add panel for a new card.");
+    var isData = current.indexOf("data:") === 0;
+    audioModalUrl.value = isData ? "" : current;
+    if (current) {
+      audioModalCurrent.style.display = "flex";
+      audioModalCurrentLabel.textContent = isData ? "Current: uploaded audio file" : "Current: " + current;
+    } else {
+      audioModalCurrent.style.display = "none";
+    }
+
+    audioModalOverlay.classList.add("open");
+    setTimeout(function () { audioModalUrl.focus(); }, 30);
+  }
+
+  function closeAudioModal() {
+    audioModalOverlay.classList.remove("open");
+    audioModalTarget = null;
+    audioModalPendingDataUrl = "";
+    audioModalRemoveRequested = false;
+  }
+
+  audioModalUrl.addEventListener("input", function () {
+    if (audioModalPendingDataUrl) {
+      audioModalPendingDataUrl = "";
+      audioModalFileName.textContent = "";
+      audioModalFileInput.value = "";
+    }
+    audioModalRemoveRequested = false;
+  });
+
+  audioModalUploadBtn.addEventListener("click", function () {
+    audioModalFileInput.value = "";
+    audioModalFileInput.click();
+  });
+
+  audioModalFileInput.addEventListener("change", function () {
+    var file = audioModalFileInput.files && audioModalFileInput.files[0];
+    if (!file) return;
+    var isAudioLike = file.type.indexOf("audio/") === 0 || file.type === "video/mp4" || /\.(mp3|wav|ogg|m4a|mp4|aac|flac|webm)$/i.test(file.name);
+    if (!isAudioLike) {
+      showAudioModalMsg("Please choose an audio file (mp3, wav, ogg, m4a, or mp4).");
+      audioModalFileInput.value = "";
       return;
     }
-    setItemAudio(item, val);
-    updateAudioBtnState(item, audioBtn);
-  }
+    var MAX_BYTES = 15 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      showAudioModalMsg("That file is a bit large for saving in the browser (max ~15MB). Try a smaller file or use a hosted URL instead.");
+      audioModalFileInput.value = "";
+      return;
+    }
+    showAudioModalMsg("");
+    var reader = new FileReader();
+    reader.onload = function () {
+      audioModalPendingDataUrl = String(reader.result || "");
+      audioModalRemoveRequested = false;
+      audioModalUrl.value = "";
+      audioModalFileName.textContent = file.name;
+    };
+    reader.onerror = function () {
+      showAudioModalMsg("Couldn't read that file.");
+    };
+    reader.readAsDataURL(file);
+  });
+
+  audioModalRemoveBtn.addEventListener("click", function () {
+    audioModalRemoveRequested = true;
+    audioModalPendingDataUrl = "";
+    audioModalFileName.textContent = "";
+    audioModalFileInput.value = "";
+    audioModalUrl.value = "";
+    showAudioModalMsg("");
+  });
+
+  audioModalCancel.addEventListener("click", closeAudioModal);
+  audioModalOverlay.addEventListener("click", function (e) {
+    if (e.target === audioModalOverlay) closeAudioModal();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && audioModalOverlay.classList.contains("open")) closeAudioModal();
+  });
+
+  audioModalSave.addEventListener("click", function () {
+    if (!audioModalTarget) return;
+    var urlVal = audioModalUrl.value.trim();
+
+    var finalAudio;
+    if (audioModalRemoveRequested) {
+      finalAudio = "";
+    } else if (audioModalPendingDataUrl) {
+      finalAudio = audioModalPendingDataUrl;
+    } else if (urlVal) {
+      if (!isValidUrl(urlVal)) {
+        showAudioModalMsg("That doesn't look like a valid http/https URL.");
+        return;
+      }
+      finalAudio = urlVal;
+    } else {
+      finalAudio = audioModalTarget.item.audio || "";
+    }
+
+    setItemAudio(audioModalTarget.item, finalAudio);
+    updateAudioBtnState(audioModalTarget.item, audioModalTarget.audioBtn);
+    closeAudioModal();
+  });
 
   function updateAudioBtnState(item, audioBtn) {
     if (item.audio) {
@@ -780,7 +960,7 @@
       imgwrap.innerHTML = "";
       var broken = document.createElement("div");
       broken.className = "broken";
-      broken.textContent = "Couldn't load image\n" + item.url;
+      broken.textContent = "Couldn't load image" + (item.url.indexOf("data:") === 0 ? "" : "\n" + item.url);
       imgwrap.appendChild(broken);
     });
     imgwrap.appendChild(img);
@@ -788,7 +968,7 @@
 
     var label = document.createElement("div");
     label.className = "label";
-    label.textContent = item.note ? item.note : item.url;
+    label.textContent = item.note ? item.note : (item.url.indexOf("data:") === 0 ? "uploaded image" : item.url);
     card.appendChild(label);
 
     var del = document.createElement("div");
@@ -803,6 +983,17 @@
     });
     card.appendChild(del);
 
+    var audioErrBadge = document.createElement("div");
+    audioErrBadge.className = "audioErr";
+    audioErrBadge.textContent = "Couldn't play audio";
+    card.appendChild(audioErrBadge);
+    var audioErrTimer = null;
+    function flashAudioError() {
+      audioErrBadge.classList.add("show");
+      if (audioErrTimer) clearTimeout(audioErrTimer);
+      audioErrTimer = setTimeout(function () { audioErrBadge.classList.remove("show"); }, 2200);
+    }
+
     // Hidden media element used for audio playback. <video> is used (kept
     // visually hidden) so mp4 files can be used purely as audio sources.
     var mediaEl = document.createElement("video");
@@ -815,7 +1006,7 @@
     mediaEl.addEventListener("error", function () {
       audioBtn.classList.remove("playing");
       if (currentlyPlaying && currentlyPlaying.mediaEl === mediaEl) currentlyPlaying = null;
-      if (item.audio) alert("Couldn't load audio for this card:\n" + item.audio);
+      if (item.audio) flashAudioError();
     });
     card.appendChild(mediaEl);
 
@@ -827,7 +1018,7 @@
     audioBtn.addEventListener("click", function (e) {
       e.stopPropagation();
       if (e.shiftKey || !item.audio) {
-        promptForAudio(item, audioBtn);
+        openAudioModal(item, audioBtn);
         return;
       }
       var isThisPlaying = currentlyPlaying && currentlyPlaying.mediaEl === mediaEl;
@@ -838,7 +1029,7 @@
       var playPromise = mediaEl.play();
       if (playPromise && playPromise.catch) {
         playPromise.catch(function () {
-          alert("Couldn't play audio for this card:\n" + item.audio);
+          flashAudioError();
         });
       }
       audioBtn.classList.add("playing");
@@ -966,15 +1157,15 @@
   }
 
   addBtn.addEventListener("click", function () {
-    var url = urlInput.value.trim();
+    var url = pendingImageDataUrl || urlInput.value.trim();
     var note = noteInput.value.trim();
     var audio = pendingAudioDataUrl || audioInput.value.trim();
     showError("");
     if (!url) {
-      showError("Enter a URL first.");
+      showError("Enter a URL or upload an image file first.");
       return;
     }
-    if (!isValidUrl(url)) {
+    if (!pendingImageDataUrl && !isValidUrl(url)) {
       showError("That doesn't look like a valid http/https URL.");
       return;
     }
@@ -986,6 +1177,9 @@
     urlInput.value = "";
     noteInput.value = "";
     audioInput.value = "";
+    pendingImageDataUrl = "";
+    imageFileName.textContent = "";
+    imageFileInput.value = "";
     pendingAudioDataUrl = "";
     audioFileName.textContent = "";
     audioFileInput.value = "";
@@ -1001,6 +1195,46 @@
   });
   audioInput.addEventListener("keydown", function (e) {
     if (e.key === "Enter") addBtn.click();
+  });
+
+  urlInput.addEventListener("input", function () {
+    if (pendingImageDataUrl) {
+      pendingImageDataUrl = "";
+      imageFileName.textContent = "";
+      imageFileInput.value = "";
+    }
+  });
+
+  imageFileBtn.addEventListener("click", function () {
+    imageFileInput.value = "";
+    imageFileInput.click();
+  });
+
+  imageFileInput.addEventListener("change", function () {
+    var file = imageFileInput.files && imageFileInput.files[0];
+    if (!file) return;
+    var isImageLike = file.type.indexOf("image/") === 0 || /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(file.name);
+    if (!isImageLike) {
+      alert("Please choose an image file (png, jpg, gif, webp, etc).");
+      imageFileInput.value = "";
+      return;
+    }
+    var MAX_BYTES = 15 * 1024 * 1024; // 15MB safety cap for localStorage
+    if (file.size > MAX_BYTES) {
+      alert("That file is a bit large for saving in the browser (max ~15MB). Try a smaller file or use a hosted URL instead.");
+      imageFileInput.value = "";
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      pendingImageDataUrl = String(reader.result || "");
+      urlInput.value = "";
+      imageFileName.textContent = file.name;
+    };
+    reader.onerror = function () {
+      alert("Couldn't read that file.");
+    };
+    reader.readAsDataURL(file);
   });
 
   audioInput.addEventListener("input", function () {
@@ -1051,145 +1285,6 @@
     saveLocal();
   });
 
-  // --- Encode / decode board string ---
-  function encodeState() {
-    var json = JSON.stringify(state);
-    var b64 = btoa(unescape(encodeURIComponent(json)));
-    return "BOARD1:" + b64;
-  }
-
-  function decodeState(str) {
-    str = str.trim();
-    if (!str) throw new Error("Empty string.");
-    var prefix = "BOARD1:";
-    var payload;
-    if (str.indexOf(prefix) === 0) {
-      payload = str.slice(prefix.length);
-    } else {
-      payload = str;
-    }
-    var json;
-    try {
-      json = decodeURIComponent(escape(atob(payload)));
-    } catch (e) {
-      throw new Error("Couldn't decode that string. Check it was copied in full.");
-    }
-    var parsed;
-    try {
-      parsed = JSON.parse(json);
-    } catch (e) {
-      throw new Error("Decoded data isn't valid board data.");
-    }
-    if (!parsed || !Array.isArray(parsed.items)) {
-      throw new Error("Decoded data doesn't contain a valid image list.");
-    }
-    parsed.items.forEach(function (it, i) {
-      if (typeof it.url !== "string") {
-        throw new Error("Item " + (i + 1) + " is missing a URL.");
-      }
-    });
-    return parsed;
-  }
-
-  function openModal(mode) {
-    currentMode = mode;
-    statusMsg.textContent = "";
-    statusMsg.className = "";
-    if (mode === "export") {
-      modalTitle.textContent = "export string";
-      modalLabel.textContent = "Board string — copy this and save it somewhere";
-      modalText.value = encodeState();
-      modalText.readOnly = true;
-      modalPrimary.textContent = "Copy";
-    } else {
-      modalTitle.textContent = "load string";
-      modalLabel.textContent = "Paste a board string below";
-      modalText.value = "";
-      modalText.readOnly = false;
-      modalPrimary.textContent = "Load";
-    }
-    modalOverlay.classList.add("open");
-    setTimeout(function () {
-      modalText.focus();
-      modalText.select();
-    }, 30);
-  }
-
-  function closeModal() {
-    modalOverlay.classList.remove("open");
-    currentMode = null;
-  }
-
-  exportBtn.addEventListener("click", function () { openModal("export"); });
-  importBtn.addEventListener("click", function () { openModal("import"); });
-  modalSecondary.addEventListener("click", closeModal);
-  modalOverlay.addEventListener("click", function (e) {
-    if (e.target === modalOverlay) closeModal();
-  });
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && modalOverlay.classList.contains("open")) closeModal();
-  });
-
-  modalPrimary.addEventListener("click", function () {
-    if (currentMode === "export") {
-      modalText.select();
-      var copied = false;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(modalText.value).then(function () {
-          statusMsg.textContent = "Copied to clipboard.";
-          statusMsg.className = "ok";
-        }).catch(function () {
-          tryFallbackCopy();
-        });
-      } else {
-        tryFallbackCopy();
-      }
-      function tryFallbackCopy() {
-        try {
-          copied = document.execCommand("copy");
-        } catch (e) { copied = false; }
-        statusMsg.textContent = copied ? "Copied to clipboard." : "Select the text and copy manually.";
-        statusMsg.className = copied ? "ok" : "bad";
-      }
-    } else {
-      var raw = modalText.value;
-      try {
-        var parsed = decodeState(raw);
-        var replace = state.items.length === 0 || confirm("Loading will replace the current board. Continue?");
-        if (!replace) return;
-        state = parsed;
-        var maxNum = 0;
-        var maxZ = 10;
-        state.items.forEach(function (it) {
-          if (!it.id) it.id = uid();
-          var m = /_([a-z0-9]+)$/.exec(it.id);
-          if (m) {
-            var n = parseInt(m[1], 36);
-            if (!isNaN(n) && n > maxNum) maxNum = n;
-          }
-          if (typeof it.x !== "number") it.x = nextPlacement().x;
-          if (typeof it.y !== "number") it.y = nextPlacement().y;
-          if (typeof it.w !== "number") it.w = 220;
-          if (typeof it.h !== "number") it.h = 170;
-          if (typeof it.note !== "string") it.note = "";
-        if (typeof it.audio !== "string") it.audio = "";
-          if (typeof it.z !== "number") it.z = ++maxZ;
-          if (it.z > maxZ) maxZ = it.z;
-        });
-        idCounter = maxNum + 1;
-        zIndexCounter = maxZ;
-        renderAll();
-        saveLocal();
-        statusMsg.textContent = "Board loaded (" + state.items.length + " image" + (state.items.length === 1 ? "" : "s") + ").";
-        statusMsg.className = "ok";
-        setTimeout(closeModal, 700);
-      } catch (err) {
-        statusMsg.textContent = err.message || "Couldn't load that string.";
-        statusMsg.className = "bad";
-      }
-    }
-  });
-
   // --- File export / import ---
   exportFileBtn.addEventListener("click", function () {
     var json = JSON.stringify(state, null, 2);
@@ -1224,12 +1319,8 @@
           if (typeof it.url !== "string") throw new Error();
         });
       } catch (e) {
-        try {
-          parsed = decodeState(text);
-        } catch (e2) {
-          alert("That file isn't a valid board export.");
-          return;
-        }
+        alert("That file isn't a valid board export (expected a .json file).");
+        return;
       }
       var replace = state.items.length === 0 || confirm("Loading will replace the current board. Continue?");
       if (!replace) return;
