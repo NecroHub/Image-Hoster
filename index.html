@@ -1049,10 +1049,18 @@
       if (isThisPlaying) return; // was playing, just stop
       mediaEl.src = item.audio;
       mediaEl.currentTime = 0;
+      var restarted = false;
+      function onActuallyPlaying() {
+        if (restarted) return;
+        restarted = true;
+        restartGif();
+        mediaEl.removeEventListener("playing", onActuallyPlaying);
+      }
+      mediaEl.addEventListener("playing", onActuallyPlaying);
       var playPromise = mediaEl.play();
-      restartGif();
       if (playPromise && playPromise.catch) {
         playPromise.catch(function () {
+          mediaEl.removeEventListener("playing", onActuallyPlaying);
           flashAudioError();
         });
       }
